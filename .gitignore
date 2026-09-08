@@ -1,0 +1,13 @@
+# Entornos virtuales
+venv/
+.env
+__pycache__/
+
+# Datasets (Opcional, si queremos ignorarlos)
+# data/
+
+# Archivos de Jupyter
+.ipynb_checkpoints/
+
+# Archivos de OS
+.DS_Store
