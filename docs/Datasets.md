@@ -1,4 +1,4 @@
-# 📊 Datasets Utilizados
+#  Datasets Utilizados
 
 El proyecto utiliza dos datasets complementarios para entrenar las distintas capas de la [[Architecture]].
 

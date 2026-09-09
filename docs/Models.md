@@ -1,4 +1,4 @@
-# 🧠 Modelos de Machine Learning
+#  Modelos de Machine Learning
 
 Detalle de los modelos implementados en el proyecto. Todos los modelos se encuentran en la carpeta `notebooks/` para experimentación y `models/` para producción.
 

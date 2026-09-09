@@ -1,4 +1,4 @@
-# 🏗️ Arquitectura del Sistema
+# ️ Arquitectura del Sistema
 
 El sistema está diseñado con una **Arquitectura Multi-Activo** que soporta dominios industriales distintos (Motores y Turbinas), separando los flujos de inferencia de Machine Learning según la naturaleza del equipo físico.
 

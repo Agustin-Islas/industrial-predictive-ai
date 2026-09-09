@@ -1,4 +1,4 @@
-# 📓 Documentación de Notebooks — Fase 1 (Machine Learning)
+#  Documentación de Notebooks — Fase 1 (Machine Learning)
 
 Este documento describe qué hace cada notebook del proyecto, los resultados obtenidos, y las decisiones técnicas tomadas.
 
