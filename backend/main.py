@@ -42,6 +42,11 @@ app.add_middleware(
 # Endpoints REST
 # ─────────────────────────────────────────────
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Industrial Predictive AI API is running"}
+
+
 @app.get("/health")
 def health_check():
     """Verifica que la API y los modelos estén cargados correctamente."""
