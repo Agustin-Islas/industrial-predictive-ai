@@ -98,7 +98,9 @@ export function useSimulation() {
     const sockets: WebSocket[] = [];
 
     INITIAL_ASSETS.forEach((config) => {
-      const ws = new WebSocket('ws://localhost:8000/ws/stream');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const wsUrl = apiUrl.replace(/^http/, 'ws') + '/ws/stream';
+      const ws = new WebSocket(wsUrl);
       sockets.push(ws);
 
       const asset = initAssetData(config);
