@@ -28,7 +28,7 @@ const INITIAL_ASSETS: Partial<AssetData>[] = [
 export function useSimulation() {
   const [systemStatus, setSystemStatus] = useState('CONNECTING...');
   const [assets, setAssets] = useState<Record<string, AssetData>>({});
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const isPlayingRef = useRef(isPlaying);
   
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);

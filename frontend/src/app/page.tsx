@@ -102,7 +102,7 @@ export default function Dashboard() {
              {tooltipInfo}
            </div>
         )}
-        <div className="relative w-28 h-28 mb-1">
+        <div className="relative w-20 h-20 md:w-28 md:h-28 mb-1">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="42" fill="transparent" stroke="rgba(148, 163, 184, 0.1)" strokeWidth="6" />
             <circle 
@@ -112,11 +112,11 @@ export default function Dashboard() {
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold tracking-tight" style={{ color }}>{value.toFixed(1)}</span>
-            <span className="text-[10px] text-slate-400 mt-0.5">{unit}</span>
+            <span className="text-base md:text-xl font-bold tracking-tight" style={{ color }}>{value.toFixed(1)}</span>
+            <span className="text-[9px] md:text-[10px] text-slate-400 mt-0.5">{unit}</span>
           </div>
         </div>
-        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{label}</span>
+        <span className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wider font-semibold text-center leading-tight">{label}</span>
       </div>
     );
   };
@@ -155,9 +155,9 @@ export default function Dashboard() {
   if (!selectedAsset) return <div className="text-white p-10">Cargando Plataforma...</div>;
 
   return (
-    <div className="dashboard-container !grid-cols-[280px_1fr] h-screen overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr] h-screen w-screen overflow-hidden bg-slate-950">
       {/* Master List (Sidebar) */}
-      <aside className="sidebar overflow-y-auto h-full border-r border-slate-800 flex flex-col">
+      <aside className="sidebar overflow-y-auto h-[35vh] md:h-full border-b md:border-b-0 md:border-r border-slate-800 flex flex-col z-10 bg-slate-900/95 shadow-xl">
         <div className="px-6 py-6 mb-2 flex items-center justify-between border-b border-slate-800/50 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50">
@@ -242,8 +242,8 @@ export default function Dashboard() {
       </aside>
 
       {/* Detail View (Main Content) */}
-      <main className="main-content h-screen flex flex-col overflow-hidden p-6 gap-4">
-        <header className="top-bar flex-shrink-0">
+      <main className="main-content flex-1 flex flex-col overflow-y-auto p-4 md:p-6 gap-4">
+        <header className="top-bar flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
           <div>
             <h1 className="text-xl font-bold text-slate-100 uppercase tracking-wide">Plataforma de Mantenimiento Predictivo</h1>
             <p className="text-sm text-slate-400 mt-1">Activo Seleccionado: <span className="text-cyan-400 font-semibold">{selectedAsset.name} ({selectedAsset.id})</span></p>
@@ -265,7 +265,7 @@ export default function Dashboard() {
           </div>
         </header>
 
-        <div className={`panels-grid flex-1 grid gap-4 min-h-0 ${selectedAsset.type === 'TURBINE' ? 'grid-rows-2 grid-cols-1' : 'grid-cols-2 grid-rows-2'}`}>
+        <div className={`panels-grid flex-1 grid gap-4 min-h-0 ${selectedAsset.type === 'TURBINE' ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-2'}`}>
           
           {selectedAsset.type === 'MOTOR' && (
             <>
@@ -278,7 +278,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center px-2 flex-1">
+                <div className="flex justify-around items-center px-0 md:px-2 flex-1 flex-wrap">
                   <Gauge value={selectedAsset.sensorData?.process_temperature || 0} min={290} max={330} label="Temperatura" unit="°K" color="var(--accent-cyan)" tooltipInfo="Temperatura de operación. Picos repentinos están asociados a falla por sobrecalentamiento (HDF)." />
                   <Gauge value={selectedAsset.sensorData?.rotational_speed || 0} min={1200} max={2900} label="Velocidad" unit="RPM" color="var(--accent-green)" tooltipInfo="Revoluciones por minuto. Las caídas bruscas indican fallas de potencia (PWF)." />
                   <Gauge value={selectedAsset.sensorData?.torque || 0} min={10} max={80} label="Torque" unit="Nm" color="var(--accent-orange)" tooltipInfo="Fuerza de torsión. Valores muy altos sugieren sobrecarga o daño físico inminente." />
@@ -295,7 +295,7 @@ export default function Dashboard() {
               </div>
 
               {/* Panel 2: SHAP Feature Importance */}
-              <div className="glass-card flex flex-col p-4 row-span-2">
+              <div className="glass-card flex flex-col p-4 xl:row-span-2 min-h-[350px]">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center">
                     <h2 className="card-title text-sm"><BarChart2 className="w-4 h-4 mr-2" /> Impacto de Variables</h2>
@@ -305,10 +305,10 @@ export default function Dashboard() {
                 
                 <div className="flex-1 w-full min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={shapData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                    <BarChart data={shapData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" horizontal={false} />
                       <BarXAxis type="number" stroke="#94a3b8" fontSize={10} domain={[0, 100]} tickFormatter={(val) => `${val.toFixed(0)}%`} />
-                      <BarYAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} width={90} />
+                      <BarYAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={130} tick={{ fill: '#e2e8f0', fontWeight: 500 }} />
                       <Tooltip 
                         formatter={(value: number) => [`${value.toFixed(1)}%`, 'Impacto Relativo']}
                         contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 240, 255, 0.3)', borderRadius: '8px', fontSize: '11px' }}
@@ -325,7 +325,7 @@ export default function Dashboard() {
               </div>
 
               {/* Panel 3: Anomaly Detection */}
-              <div className="glass-card flex flex-col p-4">
+              <div className="glass-card flex flex-col p-4 min-h-[250px]">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center">
                     <h2 className="card-title text-sm"><AlertTriangle className="w-4 h-4 mr-2" /> Detección de Anomalías</h2>
@@ -355,7 +355,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 
-                <div className="flex justify-around items-center px-2 flex-1">
+                <div className="flex justify-around items-center px-0 md:px-2 flex-1 flex-wrap">
                   <Gauge value={selectedAsset.sensorData?.s2 || 0} min={640} max={644} label="T24" unit="°R" color="var(--accent-cyan)" tooltipInfo="Temp. total a la salida del compresor de baja presión (LPC)." />
                   <Gauge value={selectedAsset.sensorData?.s4 || 0} min={1390} max={1430} label="T41" unit="°R" color="var(--accent-orange)" tooltipInfo="Temp. total en el quemador. Un aumento constante indica degradación grave de la turbina." />
                   <Gauge value={selectedAsset.sensorData?.s11 || 0} min={46} max={48} label="Ps30" unit="psia" color="var(--accent-green)" tooltipInfo="Presión estática a la salida del compresor de alta presión (HPC)." />
@@ -364,7 +364,7 @@ export default function Dashboard() {
               </div>
 
               {/* Panel 2: RUL Timeline */}
-              <div className="glass-card flex flex-col p-4">
+              <div className="glass-card flex flex-col p-4 min-h-[300px]">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center">
                     <h2 className="card-title text-sm"><Clock className="w-4 h-4 mr-2" /> Vida Útil Restante (RUL)</h2>
