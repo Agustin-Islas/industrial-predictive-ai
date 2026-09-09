@@ -1,5 +1,7 @@
 # Industrial Predictive AI: Plataforma de Mantenimiento Predictivo Industrial ️
 
+**[🌐 Ver Demo en Vivo (App)](https://industrial-predictive-ai.vercel.app)** | **[📄 Ver API Docs (Swagger)](https://industrial-predictive-ai.onrender.com/docs)**
+
 > **Transformando datos de telemetría en disponibilidad operativa.** Una solución *end-to-end* que aplica Deep Learning y Machine Learning para anticipar fallas en activos críticos, optimizando los programas de mantenimiento y reduciendo el tiempo de inactividad no planificado (Unplanned Downtime).
 
 ##  Valor Industrial y Caso de Negocio
