@@ -1,10 +1,10 @@
-# YPF Predict: Plataforma de Mantenimiento Predictivo Industrial ️
+# Industrial Predictive AI: Plataforma de Mantenimiento Predictivo Industrial ️
 
 > **Transformando datos de telemetría en disponibilidad operativa.** Una solución *end-to-end* que aplica Deep Learning y Machine Learning para anticipar fallas en activos críticos, optimizando los programas de mantenimiento y reduciendo el tiempo de inactividad no planificado (Unplanned Downtime).
 
 ##  Valor Industrial y Caso de Negocio
 
-El mantenimiento reactivo y preventivo tradicional a menudo resulta en costos innecesarios o paradas catastróficas imprevistas. **YPF Predict** introduce una estrategia de **Mantenimiento Predictivo (PdM)** orientada a la industria pesada:
+El mantenimiento reactivo y preventivo tradicional a menudo resulta en costos innecesarios o paradas catastróficas imprevistas. **Industrial Predictive AI** introduce una estrategia de **Mantenimiento Predictivo (PdM)** orientada a la industria pesada:
 
 - **Reducción de Paradas Imprevistas:** Detección temprana de anomalías termodinámicas y mecánicas antes de que alcancen umbrales críticos de falla.
 - **Mantenimiento Basado en Condición (CBM):** Transición de mantenimientos basados en calendario a intervenciones basadas en el estado real del activo.

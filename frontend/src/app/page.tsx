@@ -163,7 +163,7 @@ export default function Dashboard() {
             <div className="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50">
               <Zap className="w-5 h-5 text-cyan-400" />
             </div>
-            <span className="font-bold text-lg tracking-wide text-slate-100">YPF PREDICT</span>
+            <span className="font-bold text-lg tracking-wide text-slate-100">INDUSTRIAL PREDICTIVE AI</span>
           </div>
         </div>
         
