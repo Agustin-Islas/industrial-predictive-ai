@@ -24,6 +24,16 @@ Evalúa mediciones instantáneas de torque, RPM y temperaturas para equipos rota
 Analiza la degradación termodinámica prolongada (presiones y temperaturas en LPC, HPC y quemador).
 - **Pronóstico de RUL (LSTM):** Red Neuronal Recurrente (Long Short-Term Memory) que consume ventanas secuenciales de 30 ciclos operativos para proyectar con rigor matemático los ciclos de vida útil restantes antes del colapso funcional.
 
+## 📓 Notebooks de Experimentación (Jupyter)
+
+Todo el proceso de Análisis Exploratorio (EDA), Feature Engineering y Entrenamiento de los modelos está documentado paso a paso en los notebooks de experimentación adjuntos. Son el origen matemático de los modelos en producción:
+
+1. [01_eda_ai4i.ipynb](notebooks/01_eda_ai4i.ipynb): Análisis Exploratorio del dataset AI4I. Limpieza de datos, análisis de correlación y visualización de las distribuciones de los distintos modos de falla rotativa (TWF, HDF, PWF, OSF).
+2. [02_classification_xgboost.ipynb](notebooks/02_classification_xgboost.ipynb): Entrenamiento del modelo de Clasificación Multiclase. Optimización de hiperparámetros, validación cruzada y extracción del explicador TreeSHAP para la interpretabilidad en planta.
+3. [03_anomaly_autoencoder.ipynb](notebooks/03_anomaly_autoencoder.ipynb): Diseño y entrenamiento de la red neuronal Autoencoder en PyTorch. Se entrena solo con muestras "Sanas" para aprender a calcular el umbral dinámico del Error de Reconstrucción (MSE).
+4. [04_eda_cmapss.ipynb](notebooks/04_eda_cmapss.ipynb): Análisis profundo del dataset CMAPSS de la NASA (Turbinas de Gas). Identificación matemática de los 12 sensores termodinámicos con mayor correlación a la degradación a lo largo del tiempo de vida del motor.
+5. [05_rul_lstm.ipynb](notebooks/05_rul_lstm.ipynb): Construcción de la red neuronal recurrente LSTM. Formateo de las series temporales en secuencias deslizantes (ventanas de 30 ciclos) y entrenamiento de la red para predecir de forma continua el RUL (Remaining Useful Life).
+
 ## 💻 Ingeniería de Software y Despliegue
 
 La solución va más allá de un *notebook* de experimentación, implementando un entorno de producción que procesa un flujo de telemetría en tiempo real:
