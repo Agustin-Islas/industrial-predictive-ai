@@ -1,156 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Thermometer, Zap, AlertTriangle, Clock, Settings, HardDrive, BarChart2, ShieldCheck, History, LogOut } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Activity, Zap, AlertTriangle, Clock, BarChart2, Info, Play, Pause, RotateCcw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, YAxis as BarYAxis, XAxis as BarXAxis } from 'recharts';
+import { useSimulation, AssetStatus } from './useSimulation';
 
-// --- Types ---
-type AssetStatus = 'NORMAL' | 'WATCH' | 'WARNING' | 'CRITICAL';
-
-interface AssetData {
-  id: string;
-  name: string;
-  sensorData: {
-    air_temperature: number;
-    process_temperature: number;
-    rotational_speed: number;
-    torque: number;
-    tool_wear: number;
-  };
-  prediction: any | null;
-  rulHistory: { cycle: number; rul: number }[];
-  status: AssetStatus;
-  ws: WebSocket | null;
-}
-
-// --- Initial Config ---
-const INITIAL_ASSETS = [
-  { id: 'MTR-001', name: 'Bomba Principal A', baseTemp: 298, baseRpm: 1550 },
-  { id: 'MTR-002', name: 'Compresor Gas B', baseTemp: 302, baseRpm: 2100 },
-  { id: 'MTR-003', name: 'Ventilador Torre', baseTemp: 295, baseRpm: 1200 },
-  { id: 'MTR-004', name: 'Bomba Inyección', baseTemp: 305, baseRpm: 2800 },
-  { id: 'MTR-005', name: 'Motor Auxiliar', baseTemp: 300, baseRpm: 1400 },
-];
+const InfoTooltip = ({ text }: { text: string }) => (
+  <div className="group relative ml-2 flex items-center">
+    <Info className="w-4 h-4 text-slate-500 hover:text-cyan-400 cursor-help transition-colors" />
+    <div className="absolute hidden group-hover:block w-64 p-3 bg-slate-900 text-xs text-slate-200 border border-slate-700 rounded-lg shadow-2xl z-[100] top-full left-0 mt-2 leading-relaxed font-normal normal-case">
+      {text}
+    </div>
+  </div>
+);
 
 export default function Dashboard() {
-  const [systemStatus, setSystemStatus] = useState('CONNECTING...');
-  const [assets, setAssets] = useState<Record<string, AssetData>>({});
-  const [selectedAssetId, setSelectedAssetId] = useState<string>(INITIAL_ASSETS[0].id);
-
-  // Initialize Assets and WebSockets
-  useEffect(() => {
-    const newAssets: Record<string, AssetData> = {};
-    const sockets: WebSocket[] = [];
-
-    INITIAL_ASSETS.forEach((config) => {
-      const ws = new WebSocket('ws://localhost:8000/ws/stream');
-      sockets.push(ws);
-
-      newAssets[config.id] = {
-        id: config.id,
-        name: config.name,
-        sensorData: {
-          air_temperature: config.baseTemp,
-          process_temperature: config.baseTemp + 10,
-          rotational_speed: config.baseRpm,
-          torque: 40 + Math.random() * 20,
-          tool_wear: Math.random() * 50
-        },
-        prediction: null,
-        rulHistory: Array.from({length: 20}).map((_, i) => ({
-          cycle: i,
-          rul: 125 - (i * 0.5) + (Math.random() * 2 - 1)
-        })),
-        status: 'NORMAL',
-        ws: ws
-      };
-
-      ws.onopen = () => setSystemStatus('CONNECTED');
-      ws.onclose = () => setSystemStatus('OFFLINE');
-
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        
-        setAssets(prev => {
-          if (!prev[config.id]) return prev;
-          
-          let newStatus: AssetStatus = 'NORMAL';
-          if (data.anomaly.severity === 'critical' || data.classification.predicted_class !== 0) {
-            newStatus = 'CRITICAL';
-          } else if (data.anomaly.severity === 'warning') {
-            newStatus = 'WARNING';
-          } else if (data.anomaly.severity === 'watch') {
-            newStatus = 'WATCH';
-          }
-
-          return {
-            ...prev,
-            [config.id]: {
-              ...prev[config.id],
-              prediction: data,
-              status: newStatus
-            }
-          };
-        });
-      };
-    });
-
-    setAssets(newAssets);
-
-    // Simulation Loop
-    const interval = setInterval(() => {
-      setAssets(prev => {
-        const next = { ...prev };
-        
-        Object.keys(next).forEach(id => {
-          const asset = next[id];
-          if (!asset.ws || asset.ws.readyState !== WebSocket.OPEN) return;
-
-          // Generate next tick data
-          const newData = {
-            air_temperature: asset.sensorData.air_temperature + (Math.random() * 0.4 - 0.2),
-            process_temperature: asset.sensorData.process_temperature + (Math.random() * 0.4 - 0.2),
-            rotational_speed: asset.sensorData.rotational_speed + (Math.random() * 20 - 10),
-            torque: asset.sensorData.torque + (Math.random() * 2 - 1),
-            tool_wear: asset.sensorData.tool_wear + 0.1
-          };
-
-          // 2% chance to trigger an anomaly per tick per machine
-          if (Math.random() > 0.98) {
-             newData.process_temperature += 8;
-             newData.rotational_speed -= 300;
-          }
-
-          // Send to backend
-          asset.ws.send(JSON.stringify(newData));
-
-          // Update local state
-          const lastRul = asset.rulHistory[asset.rulHistory.length - 1];
-          const nextCycle = lastRul.cycle + 1;
-          const nextRulVal = Math.max(0, lastRul.rul - 0.1 + (Math.random() * 1 - 0.5));
-          
-          next[id] = {
-            ...asset,
-            sensorData: newData,
-            rulHistory: [...asset.rulHistory.slice(1), { cycle: nextCycle, rul: nextRulVal }]
-          };
-        });
-        
-        return next;
-      });
-    }, 2000);
-
-    return () => {
-      clearInterval(interval);
-      sockets.forEach(ws => ws.close());
-    };
-  }, []);
-
+  const { systemStatus, assets, isPlaying, setIsPlaying, resetSimulation } = useSimulation();
+  const [selectedAssetId, setSelectedAssetId] = React.useState<string>('MTR-001');
 
   // --- Derived State for UI ---
   const assetsList = Object.values(assets);
   
-  // Sort by severity (CRITICAL > WARNING > WATCH > NORMAL) then by ID
   const sortedAssets = useMemo(() => {
     const weight = { CRITICAL: 4, WARNING: 3, WATCH: 2, NORMAL: 1 };
     return [...assetsList].sort((a, b) => {
@@ -161,46 +31,92 @@ export default function Dashboard() {
     });
   }, [assetsList]);
 
-  const selectedAsset = assets[selectedAssetId];
-  
+  const selectedAsset = assets[selectedAssetId] || assetsList[0];
   const totalAlerts = assetsList.filter(a => a.status === 'CRITICAL' || a.status === 'WARNING').length;
 
   // --- Render Helpers ---
   const getStatusColor = (status: AssetStatus) => {
     switch(status) {
-      case 'CRITICAL': return 'var(--status-critical)'; // text-red-500
-      case 'WARNING': return 'var(--status-warning)';   // text-orange-500
-      case 'WATCH': return 'var(--status-watch)';       // text-yellow-500
-      default: return 'var(--status-normal)';           // text-green-500
+      case 'CRITICAL': return 'var(--status-critical)';
+      case 'WARNING': return 'var(--status-warning)';
+      case 'WATCH': return 'var(--status-watch)';
+      default: return 'var(--status-normal)';
     }
   };
 
-  const shapData = selectedAsset?.prediction ? 
-    Object.entries(selectedAsset.prediction.classification.shap_explanation)
-      .map(([name, value]) => ({ name: name.replace(' K', '').replace(' rpm', ''), value: Number(value) }))
-      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-      .slice(0, 6)
-    : [];
+  const FEATURE_NAMES: Record<string, string> = {
+    'Air temperature K': 'Temp. Aire',
+    'Process temperature K': 'Temp. Proceso',
+    'Rotational speed rpm': 'Velocidad (RPM)',
+    'Torque Nm': 'Torque (Nm)',
+    'Tool wear min': 'Desgaste Herr.',
+    'delta_temp': 'Diferencial Temp.',
+    'power_kw': 'Potencia (kW)',
+    'wear_torque': 'Fuerza Desgaste',
+    'air_temperature': 'Temp. Aire',
+    'process_temperature': 'Temp. Proceso',
+    'rotational_speed': 'Velocidad (RPM)',
+    'torque': 'Torque (Nm)',
+    'tool_wear': 'Desgaste Herr.'
+  };
 
-  const Gauge = ({ value, min, max, label, unit, color }: any) => {
+  const FIXED_ORDER = [
+    'Temp. Proceso',
+    'Temp. Aire',
+    'Diferencial Temp.',
+    'Velocidad (RPM)',
+    'Torque (Nm)',
+    'Potencia (kW)',
+    'Desgaste Herr.',
+    'Fuerza Desgaste'
+  ].reverse();
+
+  const shapData = useMemo(() => {
+    if (!selectedAsset?.prediction?.classification?.shap_explanation) return [];
+    
+    const exp = selectedAsset.prediction.classification.shap_explanation;
+    const totalAbs = Object.values(exp).reduce((sum: any, val: any) => sum + Math.abs(Number(val)), 0) || 1;
+
+    const dataMap = new Map();
+    Object.entries(exp).forEach(([name, value]) => {
+      const translatedName = FEATURE_NAMES[name] || name;
+      const absValue = Math.abs(Number(value));
+      dataMap.set(translatedName, {
+        name: translatedName,
+        impact: (absValue / Number(totalAbs)) * 100,
+        rawSign: Math.sign(Number(value))
+      });
+    });
+
+    return FIXED_ORDER.map(name => {
+      return dataMap.get(name) || { name, impact: 0, rawSign: 1 };
+    });
+  }, [selectedAsset?.prediction]);
+
+  const Gauge = ({ value, min, max, label, unit, color, tooltipInfo }: any) => {
     const percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
     return (
-      <div className="flex flex-col items-center justify-center p-4">
-        <div className="relative w-24 h-24 mb-2">
+      <div className="flex flex-col items-center justify-center p-2 group relative">
+        {tooltipInfo && (
+           <div className="absolute hidden group-hover:block w-48 p-2 bg-slate-900 text-[10px] text-slate-300 border border-slate-700 rounded shadow-lg z-[100] top-full left-1/2 transform -translate-x-1/2 mt-1 leading-tight font-normal normal-case text-center">
+             {tooltipInfo}
+           </div>
+        )}
+        <div className="relative w-28 h-28 mb-1">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(148, 163, 184, 0.1)" strokeWidth="8" />
+            <circle cx="50" cy="50" r="42" fill="transparent" stroke="rgba(148, 163, 184, 0.1)" strokeWidth="6" />
             <circle 
-              cx="50" cy="50" r="40" fill="transparent" stroke={color} strokeWidth="8"
-              strokeDasharray={`${(percentage * 251.2) / 100} 251.2`}
+              cx="50" cy="50" r="42" fill="transparent" stroke={color} strokeWidth="6"
+              strokeDasharray={`${(percentage * 263.89) / 100} 263.89`}
               style={{ transition: 'stroke-dasharray 0.5s ease-in-out' }}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xl font-bold" style={{ color }}>{value.toFixed(1)}</span>
-            <span className="text-[10px] text-slate-400">{unit}</span>
+            <span className="text-xl font-bold tracking-tight" style={{ color }}>{value.toFixed(1)}</span>
+            <span className="text-[10px] text-slate-400 mt-0.5">{unit}</span>
           </div>
         </div>
-        <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{label}</span>
+        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{label}</span>
       </div>
     );
   };
@@ -211,50 +127,71 @@ export default function Dashboard() {
     
     let color = 'var(--status-normal)';
     let statusText = 'NORMAL';
-    if (score >= threshold * 2) { color = 'var(--status-critical)'; statusText = 'CRITICAL'; } 
-    else if (score >= threshold) { color = 'var(--status-warning)'; statusText = 'WARNING'; } 
-    else if (score >= threshold * 0.5) { color = 'var(--status-watch)'; statusText = 'WATCH'; }
+    if (score >= threshold * 2) { color = 'var(--status-critical)'; statusText = 'CRÍTICO'; } 
+    else if (score >= threshold) { color = 'var(--status-warning)'; statusText = 'ADVERTENCIA'; } 
+    else if (score >= threshold * 0.5) { color = 'var(--status-watch)'; statusText = 'OBSERVACIÓN'; }
 
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <div className="relative w-48 h-24 overflow-hidden mb-4">
-          <div className="absolute top-0 left-0 w-full h-full rounded-t-full border-[12px] border-slate-800 border-b-0"></div>
-          <div className="absolute top-0 left-0 w-full h-full rounded-t-full border-[12px] border-b-0 opacity-80" 
+        <div className="relative w-40 h-20 overflow-hidden mb-2">
+          <div className="absolute top-0 left-0 w-full h-full rounded-t-full border-[10px] border-slate-800 border-b-0"></div>
+          <div className="absolute top-0 left-0 w-full h-full rounded-t-full border-[10px] border-b-0 opacity-80" 
                style={{ borderColor: color, clipPath: `polygon(0 100%, 100% 100%, 100% ${100-percentage}%, 0 ${100-percentage}%)`, transition: 'all 0.5s ease' }}>
           </div>
-          <div className="absolute bottom-0 left-1/2 w-1 h-20 bg-slate-200 origin-bottom rounded-t-full"
+          <div className="absolute bottom-0 left-1/2 w-1 h-16 bg-slate-200 origin-bottom rounded-t-full"
             style={{ transform: `translateX(-50%) rotate(${Math.min(180, percentage * 1.8) - 90}deg)`, transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-            <div className="absolute bottom-0 left-1/2 w-3 h-3 bg-white rounded-full transform -translate-x-1/2 translate-y-1/2"></div>
+            <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-white rounded-full transform -translate-x-1/2 translate-y-1/2"></div>
           </div>
         </div>
         <div className="text-center">
-          <div className="text-3xl font-bold mb-1" style={{ color }}>{score.toFixed(3)}</div>
-          <div className="text-xs font-semibold tracking-wider uppercase" style={{ color }}>{statusText}</div>
-          <div className="text-xs text-slate-500 mt-2">Threshold: {threshold.toFixed(3)}</div>
+          <div className="text-2xl font-bold mb-1" style={{ color }}>{score.toFixed(3)}</div>
+          <div className="text-[10px] font-semibold tracking-wider uppercase" style={{ color }}>{statusText}</div>
+          <div className="text-[10px] text-slate-500 mt-1">Umbral: {threshold.toFixed(3)}</div>
         </div>
       </div>
     );
   };
 
-  if (!selectedAsset) return <div className="text-white p-10">Cargando...</div>;
+  if (!selectedAsset) return <div className="text-white p-10">Cargando Plataforma...</div>;
 
   return (
-    <div className="dashboard-container !grid-cols-[300px_1fr]">
+    <div className="dashboard-container !grid-cols-[280px_1fr] h-screen overflow-hidden">
       {/* Master List (Sidebar) */}
-      <aside className="sidebar overflow-y-auto">
-        <div className="px-6 mb-6 flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50">
-            <Zap className="w-5 h-5 text-cyan-400" />
+      <aside className="sidebar overflow-y-auto h-full border-r border-slate-800 flex flex-col">
+        <div className="px-6 py-6 mb-2 flex items-center justify-between border-b border-slate-800/50 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-cyan-500/20 flex items-center justify-center border border-cyan-500/50">
+              <Zap className="w-5 h-5 text-cyan-400" />
+            </div>
+            <span className="font-bold text-lg tracking-wide text-slate-100">YPF PREDICT</span>
           </div>
-          <span className="font-bold text-lg tracking-wide text-slate-100">YPF PREDICT</span>
         </div>
         
-        <div className="px-4 mb-4">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Lista de Activos</h3>
-          <p className="text-xs text-slate-400 mb-4">Ordenados por criticidad en tiempo real.</p>
+        <div className="px-4 mb-4 mt-2 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Activos</h3>
+            <p className="text-[10px] text-slate-400">Orden de criticidad</p>
+          </div>
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsPlaying(!isPlaying)} 
+              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              title={isPlaying ? "Pausar Simulación" : "Reanudar Simulación"}
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-green-400" />}
+            </button>
+            <button 
+              onClick={resetSimulation} 
+              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              title="Reiniciar a Estado Normal"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2 px-3 flex-1">
+        <div className="flex flex-col gap-2 px-3 pb-6 flex-1 overflow-y-auto">
           {sortedAssets.map(asset => (
             <button 
               key={asset.id}
@@ -266,25 +203,38 @@ export default function Dashboard() {
               }`}
             >
               <div className="flex justify-between items-center w-full mb-2">
-                <span className="font-bold text-slate-200">{asset.id}</span>
-                <span className="text-[10px] px-2 py-1 rounded font-bold tracking-wider"
+                <span className="font-bold text-slate-200 text-sm">{asset.id}</span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider"
                   style={{ 
                     color: getStatusColor(asset.status), 
                     backgroundColor: `${getStatusColor(asset.status)}20`,
                     border: `1px solid ${getStatusColor(asset.status)}40`
                   }}>
-                  {asset.status}
+                  {asset.status === 'CRITICAL' ? 'CRÍTICO' : asset.status === 'WARNING' ? 'ADVERTENCIA' : asset.status === 'WATCH' ? 'OBSERVACIÓN' : 'NORMAL'}
                 </span>
               </div>
-              <div className="text-sm text-slate-400 mb-2">{asset.name}</div>
+              <div className="text-xs text-slate-400 mb-2 truncate">{asset.name}</div>
               
-              <div className="flex justify-between items-center text-xs text-slate-500">
-                <span>RUL: <span className="font-mono text-slate-300">
-                  {asset.rulHistory[asset.rulHistory.length-1].rul.toFixed(0)}c
-                </span></span>
-                <span>Temp: <span className="font-mono text-slate-300">
-                  {asset.sensorData.process_temperature.toFixed(0)}K
-                </span></span>
+              <div className="flex justify-between items-center text-[10px] text-slate-500">
+                {asset.type === 'TURBINE' ? (
+                  <>
+                    <span>RUL: <span className="font-mono text-slate-300">
+                      {asset.rulHistory.length > 0 ? asset.rulHistory[asset.rulHistory.length-1].rul.toFixed(0) : '--'}c
+                    </span></span>
+                    <span>T41: <span className="font-mono text-slate-300">
+                      {asset.sensorData?.s4?.toFixed(0) || '--'}°R
+                    </span></span>
+                  </>
+                ) : (
+                  <>
+                    <span>Temp: <span className="font-mono text-slate-300">
+                      {asset.sensorData?.process_temperature?.toFixed(0) || '--'}K
+                    </span></span>
+                    <span>RPM: <span className="font-mono text-slate-300">
+                      {asset.sensorData?.rotational_speed?.toFixed(0) || '--'}
+                    </span></span>
+                  </>
+                )}
               </div>
             </button>
           ))}
@@ -292,145 +242,165 @@ export default function Dashboard() {
       </aside>
 
       {/* Detail View (Main Content) */}
-      <main className="main-content h-screen overflow-y-auto">
-        <header className="top-bar">
+      <main className="main-content h-screen flex flex-col overflow-hidden p-6 gap-4">
+        <header className="top-bar flex-shrink-0">
           <div>
-            <h1 className="text-2xl font-bold text-slate-100 uppercase tracking-wide">Plataforma de Mantenimiento Predictivo</h1>
+            <h1 className="text-xl font-bold text-slate-100 uppercase tracking-wide">Plataforma de Mantenimiento Predictivo</h1>
             <p className="text-sm text-slate-400 mt-1">Activo Seleccionado: <span className="text-cyan-400 font-semibold">{selectedAsset.name} ({selectedAsset.id})</span></p>
           </div>
           
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">System:</span>
-              <span className={`text-xs px-2 py-1 rounded bg-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-500/20 text-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-400 border border-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-500/30 font-semibold tracking-wider`}>
-                {systemStatus}
+              <span className="text-sm text-slate-400">Sistema:</span>
+              <span className={`text-[10px] px-2 py-1 rounded bg-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-500/20 text-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-400 border border-${systemStatus === 'CONNECTED' ? 'green' : 'cyan'}-500/30 font-semibold tracking-wider`}>
+                {systemStatus === 'CONNECTED' ? 'CONECTADO' : systemStatus === 'CONNECTING...' ? 'CONECTANDO...' : 'DESCONECTADO'}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-400">Alerts:</span>
-              <span className={`text-xs px-2 py-1 rounded ${totalAlerts > 0 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-slate-800 text-slate-300'} font-semibold`}>
+              <span className="text-sm text-slate-400">Alertas:</span>
+              <span className={`text-[10px] px-2 py-1 rounded ${totalAlerts > 0 ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' : 'bg-slate-800 text-slate-300'} font-semibold`}>
                 {totalAlerts.toString().padStart(2, '0')}
               </span>
-            </div>
-            <div className="flex items-center gap-3 pl-6 border-l border-slate-800">
-              <div className="w-8 h-8 rounded-full bg-slate-700"></div>
-              <span className="text-sm font-medium">Operator 4</span>
             </div>
           </div>
         </header>
 
-        <div className="panels-grid">
-          {/* Panel 1: Real-time Sensors */}
-          <div className="glass-card flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="card-title"><Activity className="w-4 h-4" /> Telemetría (Sensores)</h2>
-              <span className="text-xs px-2 py-1 bg-slate-800 rounded text-slate-300 border border-slate-700">En vivo</span>
-            </div>
-            
-            <div className="flex justify-between items-center px-4 py-2 flex-1">
-              <Gauge 
-                value={selectedAsset.sensorData.process_temperature} 
-                min={290} max={330} 
-                label="Temperatura" unit="°K" 
-                color="var(--accent-cyan)" 
-              />
-              <Gauge 
-                value={selectedAsset.sensorData.rotational_speed} 
-                min={1200} max={2900} 
-                label="Velocidad" unit="RPM" 
-                color="var(--accent-green)" 
-              />
-              <Gauge 
-                value={selectedAsset.sensorData.torque} 
-                min={10} max={80} 
-                label="Torque" unit="Nm" 
-                color="var(--accent-orange)" 
-              />
-            </div>
-            
-            {/* Classification Result */}
-            {selectedAsset.prediction && (
-              <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 flex justify-between items-center">
-                <span className="text-sm text-slate-400">Diagnóstico XGBoost:</span>
-                <span className={`font-bold uppercase tracking-wide ${selectedAsset.prediction.classification.predicted_class === 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {selectedAsset.prediction.classification.predicted_label}
-                </span>
+        <div className={`panels-grid flex-1 grid gap-4 min-h-0 ${selectedAsset.type === 'TURBINE' ? 'grid-rows-2 grid-cols-1' : 'grid-cols-2 grid-rows-2'}`}>
+          
+          {selectedAsset.type === 'MOTOR' && (
+            <>
+              {/* Panel 1: Real-time Sensors (MOTOR) */}
+              <div className="glass-card flex flex-col p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <h2 className="card-title text-sm"><Activity className="w-4 h-4 mr-2" /> Telemetría & Diagnóstico</h2>
+                    <InfoTooltip text="Muestra los sensores en tiempo real. En la base, el modelo XGBoost (Clasificación Multiclase) diagnostica si los valores actuales se corresponden con alguna falla conocida (Ej: TWF, HDF, PWF)." />
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center px-2 flex-1">
+                  <Gauge value={selectedAsset.sensorData?.process_temperature || 0} min={290} max={330} label="Temperatura" unit="°K" color="var(--accent-cyan)" tooltipInfo="Temperatura de operación. Picos repentinos están asociados a falla por sobrecalentamiento (HDF)." />
+                  <Gauge value={selectedAsset.sensorData?.rotational_speed || 0} min={1200} max={2900} label="Velocidad" unit="RPM" color="var(--accent-green)" tooltipInfo="Revoluciones por minuto. Las caídas bruscas indican fallas de potencia (PWF)." />
+                  <Gauge value={selectedAsset.sensorData?.torque || 0} min={10} max={80} label="Torque" unit="Nm" color="var(--accent-orange)" tooltipInfo="Fuerza de torsión. Valores muy altos sugieren sobrecarga o daño físico inminente." />
+                </div>
+                
+                {selectedAsset.prediction?.classification && (
+                  <div className="mt-2 p-2 bg-slate-800/50 rounded border border-slate-700/50 flex justify-between items-center">
+                    <span className="text-[10px] text-slate-400">Estado Actual:</span>
+                    <span className={`text-xs font-bold uppercase tracking-wide ${selectedAsset.prediction.classification.predicted_class === 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {selectedAsset.prediction.classification.predicted_label}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Panel 2: SHAP Feature Importance */}
-          <div className="glass-card flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="card-title"><BarChart2 className="w-4 h-4" /> Explicabilidad SHAP</h2>
-              <span className="text-xs text-slate-500">¿Por qué falló?</span>
-            </div>
-            
-            <div className="flex-1 w-full min-h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={shapData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" horizontal={false} />
-                  <BarXAxis type="number" stroke="#94a3b8" fontSize={12} tickFormatter={(val) => val.toFixed(1)} />
-                  <BarYAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} width={100} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 240, 255, 0.3)', borderRadius: '8px' }}
-                    itemStyle={{ color: '#00f0ff' }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
-                    {shapData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.value > 0 ? 'var(--accent-cyan)' : 'var(--accent-orange)'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+              {/* Panel 2: SHAP Feature Importance */}
+              <div className="glass-card flex flex-col p-4 row-span-2">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <h2 className="card-title text-sm"><BarChart2 className="w-4 h-4 mr-2" /> Impacto de Variables</h2>
+                    <InfoTooltip text="Utiliza el algoritmo TreeSHAP (SHapley Additive exPlanations) para desglosar la decisión del XGBoost. Muestra qué porcentaje de 'culpa' tiene cada sensor en el diagnóstico actual. Celeste = Empuja a la decisión actual. Naranja = Contradice." />
+                  </div>
+                </div>
+                
+                <div className="flex-1 w-full min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={shapData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" horizontal={false} />
+                      <BarXAxis type="number" stroke="#94a3b8" fontSize={10} domain={[0, 100]} tickFormatter={(val) => `${val.toFixed(0)}%`} />
+                      <BarYAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} width={90} />
+                      <Tooltip 
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Impacto Relativo']}
+                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 240, 255, 0.3)', borderRadius: '8px', fontSize: '11px' }}
+                        itemStyle={{ color: '#00f0ff' }}
+                      />
+                      <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={10} isAnimationActive={true}>
+                        {shapData.map((entry, index) => (
+                          <Cell key={`cell-${entry.name}`} fill={entry.rawSign > 0 ? 'var(--accent-cyan)' : 'var(--accent-orange)'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
 
-          {/* Panel 3: Anomaly Detection */}
-          <div className="glass-card flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="card-title"><AlertTriangle className="w-4 h-4" /> Detección de Anomalías</h2>
-              <span className="text-xs text-slate-500">Autoencoder</span>
-            </div>
-            
-            <div className="flex-1 flex items-center justify-center min-h-[220px]">
-              {selectedAsset.prediction ? (
-                <AnomalyMeter score={selectedAsset.prediction.anomaly.reconstruction_error} threshold={selectedAsset.prediction.anomaly.threshold} />
-              ) : (
-                <div className="text-slate-500 text-sm">Waiting for data...</div>
-              )}
-            </div>
-          </div>
+              {/* Panel 3: Anomaly Detection */}
+              <div className="glass-card flex flex-col p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <h2 className="card-title text-sm"><AlertTriangle className="w-4 h-4 mr-2" /> Detección de Anomalías</h2>
+                    <InfoTooltip text="Modelo Autoencoder Neuronal (No Supervisado) entrenado solo con datos normales. Si ocurre una falla o comportamiento NUNCA antes visto por el XGBoost, el error de reconstrucción (MSE) explotará, disparando alertas preventivas." />
+                  </div>
+                </div>
+                
+                <div className="flex-1 flex items-center justify-center min-h-0 pt-4">
+                  {selectedAsset.prediction?.anomaly ? (
+                    <AnomalyMeter score={selectedAsset.prediction.anomaly.reconstruction_error} threshold={selectedAsset.prediction.anomaly.threshold} />
+                  ) : (
+                    <div className="text-slate-500 text-sm">Esperando datos...</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
-          {/* Panel 4: RUL Timeline */}
-          <div className="glass-card flex flex-col">
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="card-title"><Clock className="w-4 h-4" /> Vida Útil Restante (RUL)</h2>
-              <span className="text-xs text-slate-500">Curva de Degradación LSTM</span>
-            </div>
-            
-            <div className="flex-1 w-full min-h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={selectedAsset.rulHistory} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" vertical={false} />
-                  <XAxis dataKey="cycle" stroke="#94a3b8" fontSize={11} tickFormatter={(val) => `t+${val}`} />
-                  <YAxis stroke="#94a3b8" fontSize={11} domain={[0, 150]} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 255, 136, 0.3)', borderRadius: '8px' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="rul" 
-                    stroke="var(--accent-green)" 
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 6, fill: 'var(--accent-green)', stroke: 'white', strokeWidth: 2 }}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          {selectedAsset.type === 'TURBINE' && (
+            <>
+              {/* Panel 1: Real-time Sensors (TURBINE CMAPSS) */}
+              <div className="glass-card flex flex-col p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <h2 className="card-title text-sm"><Activity className="w-4 h-4 mr-2" /> Telemetría Termodinámica (CMAPSS)</h2>
+                    <InfoTooltip text="Muestra sensores termodinámicos clave del motor a reacción (turbina)." />
+                  </div>
+                </div>
+                
+                <div className="flex justify-around items-center px-2 flex-1">
+                  <Gauge value={selectedAsset.sensorData?.s2 || 0} min={640} max={644} label="T24" unit="°R" color="var(--accent-cyan)" tooltipInfo="Temp. total a la salida del compresor de baja presión (LPC)." />
+                  <Gauge value={selectedAsset.sensorData?.s4 || 0} min={1390} max={1430} label="T41" unit="°R" color="var(--accent-orange)" tooltipInfo="Temp. total en el quemador. Un aumento constante indica degradación grave de la turbina." />
+                  <Gauge value={selectedAsset.sensorData?.s11 || 0} min={46} max={48} label="Ps30" unit="psia" color="var(--accent-green)" tooltipInfo="Presión estática a la salida del compresor de alta presión (HPC)." />
+                  <Gauge value={selectedAsset.sensorData?.s15 || 0} min={8.3} max={8.5} label="BPR" unit="ratio" color="#a855f7" tooltipInfo="Bypass Ratio. Relación de flujo másico; su alteración sugiere desgaste interno." />
+                </div>
+              </div>
+
+              {/* Panel 2: RUL Timeline */}
+              <div className="glass-card flex flex-col p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center">
+                    <h2 className="card-title text-sm"><Clock className="w-4 h-4 mr-2" /> Vida Útil Restante (RUL)</h2>
+                    <InfoTooltip text="Red Neuronal LSTM (Long Short-Term Memory) que analiza series temporales secuenciales (Ciclos) para pronosticar cuántos ciclos de vida útil le quedan al equipo antes del fallo final." />
+                  </div>
+                </div>
+                
+                <div className="flex-1 w-full min-h-0">
+                  {selectedAsset.rulHistory.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={selectedAsset.rulHistory} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" vertical={false} />
+                        <XAxis dataKey="cycle" stroke="#94a3b8" fontSize={10} tickFormatter={(val) => `Ciclo ${val}`} />
+                        <YAxis stroke="#94a3b8" fontSize={10} domain={[0, 150]} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 255, 136, 0.3)', borderRadius: '8px', fontSize: '11px' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="rul" 
+                          stroke="var(--accent-green)" 
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, fill: 'var(--accent-green)', stroke: 'white', strokeWidth: 2 }}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-500">Esperando ciclos...</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
         </div>
       </main>
     </div>
