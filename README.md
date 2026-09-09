@@ -1,46 +1,59 @@
-# Plataforma de Mantenimiento Predictivo (YPF Predict)
+# YPF Predict: Plataforma de Mantenimiento Predictivo Industrial ⚙️
 
-Plataforma inteligente para la predicción de fallas y estimación de vida útil restante en equipos rotativos e industriales (Motores y Turbinas), utilizando modelos avanzados de Machine Learning y Deep Learning.
+> **Transformando datos de telemetría en disponibilidad operativa.** Una solución *end-to-end* que aplica Deep Learning y Machine Learning para anticipar fallas en activos críticos, optimizando los programas de mantenimiento y reduciendo el tiempo de inactividad no planificado (Unplanned Downtime).
 
-## Arquitectura Multi-Activo
+## 🏭 Valor Industrial y Caso de Negocio
 
-El sistema soporta el monitoreo de distintos tipos de activos, adaptando sus modelos matemáticos según la naturaleza del equipo:
+El mantenimiento reactivo y preventivo tradicional a menudo resulta en costos innecesarios o paradas catastróficas imprevistas. **YPF Predict** introduce una estrategia de **Mantenimiento Predictivo (PdM)** orientada a la industria pesada:
 
-### 1. Motores y Bombas (Dominio AI4I)
-Utiliza un ensamble de modelos tradicionales y redes no supervisadas:
-- **Diagnóstico (XGBoost):** Clasificación multiclase para detectar fallas conocidas como TWF (Tool Wear Failure), HDF (Heat Dissipation Failure) o PWF (Power Failure).
-- **Impacto de Variables (TreeSHAP):** Desglose en tiempo real del peso que tiene cada sensor en el diagnóstico actual del modelo XGBoost.
-- **Detección de Anomalías (Autoencoder):** Red neuronal no supervisada, entrenada exclusivamente con comportamiento normal. Detecta desviaciones desconocidas utilizando el Error Cuadrático Medio de Reconstrucción (MSE).
+- **Reducción de Paradas Imprevistas:** Detección temprana de anomalías termodinámicas y mecánicas antes de que alcancen umbrales críticos de falla.
+- **Mantenimiento Basado en Condición (CBM):** Transición de mantenimientos basados en calendario a intervenciones basadas en el estado real del activo.
+- **Optimización de OEE (Overall Equipment Effectiveness):** Maximiza el tiempo de actividad al predecir el Remaining Useful Life (RUL) de equipos de ciclo continuo.
+- **Decisiones Explicables (XAI):** En entornos industriales, la "caja negra" no es aceptable. Se incorpora **SHAP** (SHapley Additive exPlanations) para justificar y explicar al operario *por qué* el modelo predice una falla.
 
-### 2. Turbinas y Compresores (Dominio CMAPSS)
-Utiliza modelos secuenciales profundos para series temporales:
-- **Estimación de Vida Útil (LSTM):** Red Neuronal Long Short-Term Memory que analiza el historial de ciclos termodinámicos continuos (ventana de 30 ciclos) para predecir de forma exacta el RUL (Remaining Useful Life).
-- **Telemetría Termodinámica:** Monitoreo en tiempo real de presiones y temperaturas en etapas críticas (quemador, compresores LPC/HPC, bypass).
+## 🧠 Arquitectura de Machine Learning Multi-Activo
 
-## Tecnologías
+El núcleo de la plataforma no depende de un único modelo genérico, sino que emplea una arquitectura ensamblada, especializada según la naturaleza de la máquina (respaldada por los datasets de referencia industrial **NASA CMAPSS** y **AI4I**):
 
-- **Frontend:** React, Next.js, Recharts, TailwindCSS. Implementado en un entorno de React Server Components con un Dashboard reactivo (SCADA-style) adaptativo al Activo mediante WebSockets.
-- **Backend:** FastAPI (Python), Uvicorn. Arquitectura modular y asíncrona para servir modelos sin bloqueo de Event Loop (cálculos SHAP asíncronos vía Threads).
-- **Machine Learning:** PyTorch (LSTM, Autoencoder), XGBoost, Scikit-Learn.
+### 1. Motores y Bombas (Clasificación y Detección de Novedades)
+Evalúa mediciones instantáneas de torque, RPM y temperaturas para equipos rotativos.
+- **Diagnóstico Preciso (XGBoost):** Clasificador multiclase robusto para detectar firmas de falla específicas: TWF (Desgaste), HDF (Disipación de Calor), PWF (Falla de Potencia) y OSF (Sobreesfuerzo).
+- **Monitoreo No Supervisado (Autoencoder):** Red neuronal profunda entrenada exclusivamente con comportamiento "sano". Detecta de inmediato cualquier desviación operativa no clasificada mediante el Error Cuadrático de Reconstrucción (MSE).
 
-## Ejecución Local
+### 2. Turbinas de Gas y Compresores Mayores (Series Temporales)
+Analiza la degradación termodinámica prolongada (presiones y temperaturas en LPC, HPC y quemador).
+- **Pronóstico de RUL (LSTM):** Red Neuronal Recurrente (Long Short-Term Memory) que consume ventanas secuenciales de 30 ciclos operativos para proyectar con rigor matemático los ciclos de vida útil restantes antes del colapso funcional.
 
-1. **Instalar dependencias Backend:**
+## 💻 Ingeniería de Software y Despliegue
+
+La solución va más allá de un *notebook* de experimentación, implementando un entorno de producción que procesa un flujo de telemetría en tiempo real:
+
+- **Procesamiento Asíncrono de Inferencia:** Backend desarrollado en **FastAPI (Python)** manejando WebSockets bidireccionales. Los cálculos matemáticos pesados (inferencia del árbol SHAP) se delegan a un `ThreadPoolExecutor` para asegurar un flujo concurrente sin bloquear el *Event Loop*.
+- **Frontend Reactivo (SCADA-style):** Interfaz construida con **Next.js y Recharts**, diseñada con criterios de usabilidad industrial. La plataforma reacciona dinámicamente, cambiando por completo su disposición gráfica según el equipo físico que el operador esté monitoreando.
+- **Streaming de Datos Simulados:** Motor de simulación estocástica que inyecta ruido blanco y gradientes de degradación, imitando sensores reales de redes PLC/SCADA.
+
+## 🚀 Tecnologías Utilizadas
+
+- **Inteligencia Artificial:** PyTorch (LSTM, Autoencoders), Scikit-Learn, XGBoost, SHAP.
+- **Backend:** Python 3.11, FastAPI, Uvicorn, Asyncio.
+- **Frontend:** React, Next.js, TailwindCSS, Recharts.
+- **Arquitectura:** WebSockets (Real-time), Arquitectura de Microservicios (en proceso de Dockerización).
+
+## ⚙️ Ejecución Local
+
+1. **Instalar Backend:**
    ```bash
    python -m venv venv
-   .\venv\Scripts\activate
+   source venv/Scripts/activate # o venv\Scripts\activate en Windows
    pip install -r requirements.txt
-   ```
-2. **Levantar Backend:**
-   ```bash
    uvicorn backend.main:app --host 0.0.0.0 --port 8000
    ```
-3. **Levantar Frontend:**
+2. **Instalar Frontend:**
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
 
-## Próximos Pasos (Fase 4)
-- Dockerización de toda la plataforma (`docker-compose` con backend y frontend aislados).
+---
+*Desarrollado como demostración técnica de integración entre Ingeniería de Datos, Inteligencia Artificial y Desarrollo Full-Stack orientado a la Industria 4.0.*
