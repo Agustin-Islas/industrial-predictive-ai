@@ -310,7 +310,7 @@ export default function Dashboard() {
                       <BarXAxis type="number" stroke="#94a3b8" fontSize={10} domain={[0, 100]} tickFormatter={(val) => `${val.toFixed(0)}%`} />
                       <BarYAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={12} width={130} tick={{ fill: '#e2e8f0', fontWeight: 500 }} />
                       <Tooltip 
-                        formatter={(value: number) => [`${value.toFixed(1)}%`, 'Impacto Relativo']}
+                        formatter={(value: any) => [`${Number(value).toFixed(1)}%`, 'Impacto Relativo']}
                         contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(0, 240, 255, 0.3)', borderRadius: '8px', fontSize: '11px' }}
                         itemStyle={{ color: '#00f0ff' }}
                       />
